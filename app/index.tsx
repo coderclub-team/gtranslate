@@ -1,31 +1,16 @@
 import { StatusBar } from "expo-status-bar";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { translate, speak } from "google-translate-api-x";
-import { TextInput } from "react-native-paper";
+import {
+  TextInput,
+} from "react-native-paper";
 import ISO6391 from "iso-639-1";
-import { writeFileSync } from 'fs';
-// import { translateText } from './functions';
-// AIzaSyCxbe-4E1TPFz94fblfjU7zirNhteUokFE
-// import { Translate } from "@google-cloud/translate/build/src/v2";
-// const translate=new Translate({
-//   projectId: "AIzaSyCxbe-4E1TPFz94fblfjU7zirNhteUokFE",
-// })
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import React, { useCallback, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useLocales } from "expo-localization";
-// {
-//   "currencyCode": "INR",
-//   "currencySymbol": "₹",
-//   "decimalSeparator": ".",
-//   "digitGroupingSeparator": ",",
-//   "languageCode": "en",
-//   "languageTag": "en-IN",
-//   "measurementSystem": "metric",
-//   "regionCode": "IN",
-//   "textDirection": "ltr"
-// }
-
+import { playBase64Audio } from "../functions";
+import { useTheme } from "@react-navigation/native";
 export default function App() {
   const all_names = ISO6391.getAllNames();
   const locale = useLocales();
@@ -33,7 +18,7 @@ export default function App() {
   const [selected_right, setSelected_right] = React.useState("ta");
   const [input, set_input] = React.useState("");
   const [translation, set_translation] = React.useState("");
-
+  const { colors } = useTheme();
   useEffect(() => setSelected_left(locale[0].languageCode), []);
   useEffect(() => {
     const trans = async () => {
@@ -43,48 +28,45 @@ export default function App() {
         autoCorrect: true,
       });
       set_translation(result.text);
-      console.log(result);
     };
 
-    const timeoutId = setTimeout(() => {
-      trans();
-      // Call the function here
-    }, 1000); // 1000 milliseconds is 1 second
+    const timeoutId = setTimeout(() => trans(), 1000); // 1000 milliseconds is 1 second
     return () => clearTimeout(timeoutId);
   }, [input]);
 
-  const on_change_left = (value: string) => {
-    const code = ISO6391.getCode(value);
+  const on_change_left = (value: string) =>
+    setSelected_left(ISO6391.getCode(value));
 
-    setSelected_left(code);
-  };
-  const on_change_right = (value: string) => {
-    const code = ISO6391.getCode(value);
-    setSelected_right(code);
-  };
-  const handle_left_speak =async (value:string,to:string) => {
-   
-  try {
-   const file= await speak(value, {
-      to: to,
-      autoCorrect:true,
+  const on_change_right = (value: string) =>
+    setSelected_right(ISO6391.getCode(value));
 
-    })
-    writeFileSync('cat.mp3', file, {encoding:'base64'})
-    console.log(file)
-  } catch (error) {
-    console.log(error);
-  }
-  };
-  const handle_right_speak =async (value:string,to:string) => {
-    const code=ISO6391.getCode(to);
+  const handle_input_speak = async (value: string, to: string) => {
     try {
-      await speak(value, {
-        to: code,
-      })
+      const file = await speak(value, {
+        to: to,
+        autoCorrect: true,
+      });
+      await playBase64Audio(file);
     } catch (error) {
       console.log(error);
     }
+  };
+  const handle_translation_speak = async (value: string, to: string) => {
+    try {
+      const file = await speak(value, {
+        to: to,
+        autoCorrect: true,
+      });
+      await playBase64Audio(file);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const handle_swap_press = (trans: string) => {
+    const temp = selected_left;
+    setSelected_left(selected_right);
+    setSelected_right(temp);
+    set_input(trans);
   };
 
   return (
@@ -101,15 +83,20 @@ export default function App() {
         ))}
       </Picker>
       <TextInput
-        style={{
-          width: 300,
-        }}
+        mode="flat"
+        style={styles.input}
         multiline
+        value={input}
         placeholder="Type here"
         onChangeText={set_input}
         left={<TextInput.Icon icon="microphone-outline" />}
         right={
-          <TextInput.Icon onPress={()=>handle_left_speak(input,selected_left)} icon="volume-high" />
+          <TextInput.Icon
+            disabled={input.length === 0}
+            onPress={() => handle_input_speak(input, selected_left)}
+            icon="volume-high"
+            color={input.length === 0 ? "grey" : colors.primary}
+          />
         }
       />
       <View
@@ -119,7 +106,25 @@ export default function App() {
           justifyContent: "center",
         }}
       >
-        <Ionicons name="md-swap-vertical-sharp" size={24} color="black" />
+        <TouchableOpacity
+          style={{
+            width: 50,
+            height: 50,
+            backgroundColor: "white",
+            elevation: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 50,
+          }}
+          onPress={() => handle_swap_press(translation)}
+          children={
+            <Ionicons
+              name="md-swap-vertical-sharp"
+              size={24}
+              color={colors.primary}
+            />
+          }
+        />
       </View>
 
       <Picker
@@ -133,17 +138,26 @@ export default function App() {
         ))}
       </Picker>
       <TextInput
-        style={{
-          width: 300,
-        }}
+        style={styles.input}
         multiline
         placeholder="Translated text"
         value={translation}
-        left={<TextInput.Icon icon="microphone-outline" />}
+        left={
+          <TextInput.Icon
+            icon="microphone-outline"
+          />
+        }
         right={
-          <TextInput.Icon onPress={()=>handle_right_speak(translation,selected_right)} icon="volume-high" />
+          <TextInput.Icon
+            onPress={() =>
+              handle_translation_speak(translation, selected_right)
+            }
+            icon="volume-high"
+            color={input.length === 0 ? "grey" : colors.primary}
+          />
         }
       />
+     
       <StatusBar style="auto" />
     </View>
   );
@@ -155,5 +169,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  input: {
+    width: 300,
   },
 });

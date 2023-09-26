@@ -9,7 +9,9 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@motify/components": "^0.18.0",
     "@react-native-picker/picker": "2.4.10",
+    "@react-native-voice/voice": "^3.2.4",
     "@types/i18n": "^0.13.6",
     "@types/i18next": "^13.0.0",
     "expo": "~49.0.11",

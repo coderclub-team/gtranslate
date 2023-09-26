@@ -1,55 +1,90 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import React, { useEffect } from "react";
-import { requestPermissionsAsync, PermissionStatus } from "expo-media-library";
-import { Audio } from "expo-av";
-export default function about() {
-  const [hasPermission, setHasPermission] = React.useState(false);
-  const [recording, setRecording] = React.useState(new Audio.Recording());
-  const requestPermission = async () => {
-    const response = await requestPermissionsAsync();
-    if (response.status === PermissionStatus.GRANTED) {
-        Audio.setAudioModeAsync({
-            allowsRecordingIOS: true,
-            playsInSilentModeIOS: true,
-            
-        })
-      setHasPermission(true);
-      return true;
-    }
-  };
+import { useState } from "react";
+import { View, Text, TextInput, StyleSheet, Button } from "react-native";
+import Record from "../components/Record";
 
-  useEffect(() => {``
-    requestPermission();
-  }, []);
-  const record = async () => {
-    try {
-      await recording.prepareToRecordAsync();
-      await recording.startAsync();
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  const stope = async () => {
-    recording.stopAndUnloadAsync();
-  };
-
+export default function Home() {
+  const [speechText, setSpeechText] = useState("");
   return (
-    <View>
-      <Text>about</Text>
-      <Pressable
-        children={({ pressed }) => (
-          <Text style={{ color: pressed ? "red" : "blue" }}>Press Me</Text>
-        )}
-        onPress={() => record()}
-      />
-      <Pressable
-        children={({ pressed }) => (
-          <Text style={{ color: pressed ? "red" : "blue" }}>Press Me</Text>
-        )}
-        onPress={() => record()}
-      />
+    <View style={styles.container}>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Speech Text</Text>
+        <TextInput
+          multiline
+          style={styles.textInput}
+          numberOfLines={6}
+          value={speechText}
+          maxLength={500}
+          editable={true}
+        />
+        <View
+          style={{
+            alignItems: "flex-end",
+            flex: 1,
+            flexDirection: "row",
+            justifyContent: "space-between",
+          }}
+        >
+          <Button
+            title="Save"
+            color={"#007AFF"}
+            onPress={async () => {
+              console.log("save");
+            }}
+          />
+          <Button
+            title="Clear"
+            color={"#007AFF"}
+            onPress={() => {
+              setSpeechText("");
+            }}
+          />
+        </View>
+      </View>
+      <View style={styles.voiceContainer}>
+        <Record
+          onSpeechEnd={(value) => setSpeechText(value[0])}
+          onSpeechStart={() => setSpeechText("")}
+        />
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: "#F5FCFF",
+  },
+  label: {
+    fontWeight: "bold",
+    fontSize: 15,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  inputContainer: {
+    height: "50%",
+    width: "100%",
+    flex: 1,
+    padding: 10,
+    justifyContent: "center",
+  },
+  textInput: {
+    padding: 10,
+    borderColor: "#d1d5db",
+    borderWidth: 1,
+    height: 200,
+    borderRadius: 5,
+  },
+  saveButton: {
+    right: 0,
+  },
+  voiceContainer: {
+    height: "50%",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "space-around",
+  },
+});
